@@ -1,11 +1,6 @@
-import { TorrentType } from "../types/torrent-type";
+import { type TorrentType } from "../types/torrent-type";
 
-export type TaskItemType = {
-    title: string;
-    id: string;
-    status: string;
-    files: string[];
-}
+export type TaskItemType = TorrentType;
 
 export type TaskItemPropsType = {
     item: TorrentType;

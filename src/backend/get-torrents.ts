@@ -1,92 +1,96 @@
-import axios from 'axios';
-import { TorrentType } from '../types/torrent-type';
+import axios from "axios";
+import { type TorrentType } from "../types/torrent-type";
 
 // Set the parameters
-const baseUrl = 'http://localhost:8080'; // Set the base URL of the qbittorrent web UI
-const username = ''; // Set the username if you have authentication enabled
-const password = ''; // Set the password if you have authentication enabled
-const torrentHash = '...' // Set the hash of the torrent to rename the files for
-const MIN_FILE_SIZE = 1024 * 1024 * 200;
+const baseUrl = "http://localhost:8080"; // Set the base URL of the qbittorrent web UI
+const username = ""; // Set the username if you have authentication enabled
+const password = ""; // Set the password if you have authentication enabled
+// const MIN_FILE_SIZE = 1024 * 1024 * 200;
 
-function normalizeFilename (fileName: string) {
-    const invalidCharsRegex = /[\\/:\*\?"<>\|]/g;
-    const cleanFileName = fileName.replace(invalidCharsRegex, "");
-    return cleanFileName;
+export function normalizeFilename(fileName: string): string {
+  const invalidCharsRegex = /[\\/:*?"<>|]/g;
+  const cleanFileName = fileName.replace(invalidCharsRegex, "");
+  return cleanFileName;
 }
 
-function getFIleExtension(filePath: string) {
-    const extension = filePath.split(".").pop();
-    return extension;
+export function getFIleExtension(filePath: string): string {
+  const extension = filePath.split(".").pop() ?? "";
+  return extension;
 }
 
-async function getTorrents() {
- try {
-        const response = await axios.get(`${baseUrl}/api/v2/torrents/info`, {
-            params: {
-                filter: 'completed'
-            },
-            auth: {
-                username: username,
-                password: password
-            }
-        });
+export async function getTorrents(): Promise<TorrentType[]> {
+  const response = await axios.get(`${baseUrl}/api/v2/torrents/info`, {
+    params: {
+      filter: "completed",
+    },
+    auth: {
+      username,
+      password,
+    },
+  });
 
-        const torrents: TorrentType[] = response.data;
-        torrents.forEach(torrent => {
-            // console.log('Torrent Name:', torrent.name);
-            // console.log('Hash:', torrent.hash);
-            // console.log('Size:', torrent.total_size);
-            // console.log('State:', torrent.state);
-            // console.log('---');
-        });
-        return torrents;
+  const torrents: TorrentType[] = response.data;
+  torrents.forEach((torrent) => {
+    getFiles(torrent.hash)
+      .then((files) => {
+        torrent.files = files;
+      })
+      .catch((error) => {
+        console.error(error);
+      });
 
-    } catch (error) {
-        console.error('Error getting list of torrents:', error);
-    }
+    // console.log('Torrent Name:', torrent.name);
+    // console.log('Hash:', torrent.hash);
+    // console.log('Size:', torrent.total_size);
+    // console.log('State:', torrent.state);
+    // console.log('---');
+  });
+  return torrents;
 }
 
-async function getFiles(hash: string) {
-    const response = await axios.get(`${baseUrl}/api/v2/torrents/files`, {
-        params: {
-            hash
-        },
-        auth: {
-            username: username,
-            password: password
-        }
-    });
-    const files = response.data;
-    return files;
+export async function getFiles(hash: string): Promise<string[]> {
+  const response = await axios.get(`${baseUrl}/api/v2/torrents/files`, {
+    params: {
+      hash,
+    },
+    auth: {
+      username,
+      password,
+    },
+  });
+  const files = response.data;
+  return files;
 }
 
-async function renameFile(hash: string, oldPath: string, newPath: string) {
-    try {
-        var bodyFormData = new FormData();
-        bodyFormData.append('hash', hash);
-        bodyFormData.append('oldPath', hash);
+export async function renameFile(
+  hash: string,
+  oldPath: string,
+  newPath: string,
+): Promise<string[]> {
+  const bodyFormData = new FormData();
+  bodyFormData.append("hash", hash);
+  bodyFormData.append("oldPath", hash);
 
-        bodyFormData.append('newPath', hash);
+  bodyFormData.append("newPath", hash);
 
-        const response = await axios.post(`${baseUrl}/api/v2/torrents/renameFile`, {
-            hash,
-            oldPath,
-            newPath
-        }, {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        });
-        const files = response.data;
-        return files;
-    } catch(e) {
-        console.error(e);
-    }
-    
+  const response = await axios.post(
+    `${baseUrl}/api/v2/torrents/renameFile`,
+    {
+      hash,
+      oldPath,
+      newPath,
+    },
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    },
+  );
+  const files = response.data;
+  return files;
 }
 
 export default getTorrents;
-
 
 // (async function(){
 //     // all your code here
